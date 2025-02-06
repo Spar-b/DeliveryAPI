@@ -160,6 +160,64 @@ def checkout(user_id: str, address: DeliveryAddress):
     
     return delivery_info
 
+# ======================================
+# Ендпоінти для управління доставкою
+# ======================================
+
+@app.post("/delivery/calculate", response_model=DeliveryCostResponse, tags=["Доставка"])
+def calculate_delivery_cost(request: DeliveryCostRequest):
+    """
+    Обчислення вартості доставки на основі адреси користувача.
+    
+    **Приклад запиту:**
+    ```json
+    {
+      "address": {
+         "street": "Вулиця Грушевського, 15",
+         "city": "Львів",
+         "postal_code": "79000",
+         "country": "Україна"
+      }
+    }
+    ```
+    """
+    # Проста логіка: для України вартість 5.0, для інших країн – 15.0
+    if request.address.country.lower() == "україна":
+        cost = 5.0
+    else:
+        cost = 15.0
+    return DeliveryCostResponse(cost=cost)
+
+@app.get("/delivery/info/{order_id}", response_model=DeliveryInfo, tags=["Доставка"])
+def get_delivery_info(order_id: str):
+    """
+    Отримання інформації про доставку за номером замовлення.
+    """
+    delivery = deliveries.get(order_id)
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Інформацію про доставку не знайдено")
+    return delivery
+
+@app.post("/delivery/availability", response_model=AvailabilityCheckResponse, tags=["Доставка"])
+def check_delivery_availability(request: AvailabilityCheckRequest):
+    """
+    Перевірка доступності товарів для доставки в певний регіон.
+    
+    **Приклад запиту:**
+    ```json
+    {
+      "region": "Схід",
+      "product_id": "abc1231"
+    }
+    ```
+    
+    Логіка: для прикладу, якщо регіон "Схід" і ідентифікатор товару закінчується на "1", товар недоступний.
+    """
+    if request.region.lower() == "схід" and request.product_id.endswith("1"):
+        return AvailabilityCheckResponse(available=False, message="Товар недоступний для доставки в даний регіон")
+    else:
+        return AvailabilityCheckResponse(available=True, message="Товар доступний для доставки")
+
 # =============================================
 # Ендпоінти для управління адресами доставки
 # =============================================
